@@ -65,7 +65,7 @@
     preguntaText:
         .asciz "¿Seguro que quiere terminar la ejecucion de la calculadora?\n"
         .asciz "1. Si, estoy seguro.\n"
-        .asciz "2. No\n"
+        .asciz "2. No, regresame al menu principal\n"
         lenPreguntaText = . - preguntaText
 
     finalizarText:
@@ -73,6 +73,29 @@
         .asciz "Hasta luego\n"
         lenFinalizarText = . - finalizarText
 
+.bss
+    opcion:
+        .space 5
+    operador1:
+        .space 8
+    operador2:
+        .space 8
+
+.macro print texto, cantidad
+    MOV x0, 1
+    LDR X1, =\texto 
+    LDR X2, =\cantidad
+    MOV x8, 64
+    SVC 0
+.endm
+
+.macro input
+    MOV x0, 0
+    LDR x1, =opcion
+    MOV x2, 5
+    MOV x8, 63
+    SVC 0
+.endm
 
 .text
 _start:
@@ -81,6 +104,85 @@ _start:
     print encabezado, lenEncabezado
     input
 
+    menu:
+        print clear, lenClear
+        print menuPrincipal, lenMenuPrincipal
+        print msgOpcion, lenOpcion
+        input
+
+        LDR x10, =opcion
+        LDRB w10, [x10]
+         
+        CMP w10, 49
+        BEQ suma
+
+        CMP w10, 50
+        BEQ resta
+
+        CMP w10, 51
+        BEQ multiplicacion
+
+        CMP w10, 52
+        BEQ division
+
+        CMP w10, 53
+        BEQ operacion_memoria
+        
+        CMP w10, 54
+        BEQ finalizar_calculadora
+
+        suma:
+            print clear, lenClear
+            print sumaText, lenSumaText
+            print formatoText, lenFormatoText
+            // agregar funcionalidad
+            B cont
+
+        resta:
+            print clear, lenClear
+            print restaText, lenRestaText
+            print formatoText, lenFormatoText
+            // agregar funcionalidad
+            B cont
+
+        multiplicacion:
+            print clear, lenClear
+            print multiplicacionText, lenMultiplicacionText
+            print formatoText, lenFormatoText        
+            // agregar funcionalidad  
+            B cont
+
+        division:
+            print clear, lenClear
+            print divisionText, lenDivisionText
+            print formatoText, lenFormatoText
+            // agregar funcionalidad
+            B cont
+
+        operacion_memoria:
+            print clear, lenClear
+            print operacionesText, lenOperacionesText  
+            // agregar funcionalidad          
+            B cont
+
+        cont:
+            input
+            B menu
+    
+    finalizar_calculadora:
+        print clear, lenClear
+        print preguntaText, lenPreguntaText
+        print msgOpcion, lenOpcion
+        input
+
+        LDR x10, =opcion
+        LDRB w10, [x10]
+
+        CMP w10, 49
+        BEQ end
+
+        CMP w10, 50
+        BEQ menu
 
     end:
         print clear, lenClear
