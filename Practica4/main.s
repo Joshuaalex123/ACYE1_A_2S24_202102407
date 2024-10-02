@@ -55,10 +55,20 @@ encabezado:
         .asciz "Ingrese la opcion que desea realizar:\n"
         lenOpcion = . - msgOpcion
 
+    preguntaText:
+        .asciz "¿Seguro que quiere terminar la ejecucion de la calculadora?\n"
+        .asciz "1. Si\n"
+        .asciz "2. No, regresar al menu Principal\n"
+        lenPreguntaText = . - preguntaText
+
+    finalizarText:
+        .asciz "Finalizo la ejecucion del programa\n"
+        .asciz "Hasta luego\n"
+        lenFinalizarText = . - finalizarText
 
 .macro input
     MOV x0, 0
-    LDR x1, =opcion
+    LDR x1, =opcion2
     MOV x2, 5
     MOV x8, 63
     SVC 0
@@ -67,6 +77,8 @@ encabezado:
 .bss
 opcion:
     .space 2
+opcion2:
+    .space 5     
 
 filename:
     .zero 50
@@ -179,6 +191,7 @@ readCSV:
         print readSuccess, lenReadSuccess
         read 0, opcion, 2
         RET
+        
 
 atoi:
     // params: x5, x8 => buffer address, x12 => result address
@@ -359,20 +372,11 @@ bubbleSort:
         BNE bs_loop1
     RET
 
-// Etiqueta de inicio del programa
-_start:
+leercsv:
     // Limpiar salida de la terminal
     print clear_screen, lenClear
-    print encabezado, lenEncabezado
-    input
+// Mensaje para ingresar el nombre del archivo
 
-    menu:
-        print clear_screen, lenClear
-        print menuPrincipal, lenMenuPrincipal
-        print msgOpcion, lenOpcion
-        input
-
-    // Mensaje para ingresar el nombre del archivo
     print msgFilename, lenMsgFilename
     read 0, filename, 50
     
@@ -404,8 +408,58 @@ _start:
     // recorrer array y convertir a ascii
     BL convert_array_to_ascii
 
-    // Instruccion para terminar el programa
+    //imprimir el array ordenado
+    print salto, lenSalto
+
+    B menu
+
+
+
+// Etiqueta de inicio del programa
+_start:
+    // Limpiar salida de la terminal
+    print clear_screen, lenClear
+    print encabezado, lenEncabezado
+    input
+
+    menu:
+
+        print menuPrincipal, lenMenuPrincipal
+        print msgOpcion, lenOpcion
+        input
+
+        LDR x17, =opcion2
+        LDRB w10, [x17]
+
+        CMP w10, 49
+        BEQ leercsv
+        
+
+        CMP w10, 52
+        BEQ finalizar_calculadora
+
+    
+
+
+
+    finalizar_calculadora:
+        print clear_screen, lenClear
+        print preguntaText, lenPreguntaText
+        print msgOpcion, lenOpcion
+        input
+
+        LDR x10, =opcion2
+        LDRB w10, [x10]
+
+        CMP w10, 49
+        BEQ end
+
+        CMP w10, 50
+        BEQ menu
+
     end:
-        MOV x0, 0
-        MOV x8, 93
-        SVC 0
+        print clear_screen, lenClear
+        print finalizarText, lenFinalizarText
+        MOV x0, 0 
+        MOV x8, 93 
+        SVC 0                
