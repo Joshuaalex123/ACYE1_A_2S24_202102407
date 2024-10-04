@@ -16,6 +16,8 @@ espacio:
     .asciz " "
     lenEspacio = .- espacio
 
+  
+
 clear_screen:
     .asciz "\x1B[2J\x1B[H"
     lenClear = .- clear_screen
@@ -32,6 +34,13 @@ readSuccess:
     .asciz "El Archivo Se Ha Leido Correctamente\n"
     lenReadSuccess = .- readSuccess
 
+
+menuAsc:
+    .asciz ">> Seleccione como lo quiere ordenar \n"
+    .asciz "1. Ascendente\n"
+    .asciz "2. Descendente\n"
+    lenAsc = . - menuAsc
+
 encabezado:
     .asciz "Universidad de San Carlos de Guatemala\n"
     .asciz "Facultad de Ingenieria\n"
@@ -47,8 +56,9 @@ encabezado:
         .asciz ">> Menu Principal\n"
         .asciz "1. Ingreso de lista de números\n"
         .asciz "2. Bubble Sort\n"
-        .asciz "3. Insertion sort\n"
-        .asciz "4. Finalizar programa\n"
+        .asciz "3. Quick sort\n"
+        .asciz "4. Insertion sort\n"
+        .asciz "5. Finalizar programa\n"
         lenMenuPrincipal = . - menuPrincipal
 
     msgOpcion:
@@ -78,7 +88,9 @@ encabezado:
 opcion:
     .space 2
 opcion2:
-    .space 5     
+    .space 5 
+opcion3:
+    .space 5        
 
 filename:
     .zero 50
@@ -116,6 +128,12 @@ array:
     MOV x8, 63
     SVC 0
 .endm
+
+
+
+
+
+
 
 openFile:
     // param: x1 -> filename
@@ -338,6 +356,9 @@ convert_array_to_ascii:          // Aquí comienza la sección de código accesi
         LDP x29, x30, [SP], 16       // Restaurar x29 y x30 al finalizar
         RET                          // Retorno del procedimiento
 
+
+
+
 bubbleSort:
     LDR x0, =count
     LDR x0, [x0] // length => cantidad de numeros leidos del csv
@@ -345,9 +366,16 @@ bubbleSort:
     MOV x1, 0 // index i - bubble sort algorithm
     SUB x0, x0, 1 // length - 1
 
+
+
+    
+
     bs_loop1:
         MOV x9, 0 // index j - algoritmo de bubble sort
         SUB x2, x0, x1 // longitud - 1 - i
+    
+
+
 
     bs_loop2:
         LDR x3, =array
@@ -355,13 +383,24 @@ bubbleSort:
         ADD x9, x9, 1
         LDRH w5, [x3, x9, LSL 1] // array[i + 1]
 
+
+
         CMP w4, w5
         BLT bs_cont_loop2 // Cambia BLT a BGT para ordenar en orden descendente
 
+
+
+
+
+        // Intercambiar si no están en orden
         STRH w4, [x3, x9, LSL 1]
         SUB x9, x9, 1
         STRH w5, [x3, x9, LSL 1]
         ADD x9, x9, 1
+
+
+
+
 
     bs_cont_loop2:
         CMP x9, x2
@@ -372,6 +411,344 @@ bubbleSort:
         BNE bs_loop1
     RET
 
+bubbleSort2:
+    LDR x0, =count
+    LDR x0, [x0] // length => cantidad de numeros leidos del csv
+
+    MOV x1, 0 // index i - bubble sort algorithm
+    SUB x0, x0, 1 // length - 1
+
+
+
+    
+
+    bs_loop1_1:
+        MOV x9, 0 // index j - algoritmo de bubble sort
+        SUB x2, x0, x1 // longitud - 1 - i
+    
+
+
+
+    bs_loop2_2:
+        LDR x3, =array
+        LDRH w4, [x3, x9, LSL 1] // array[i]
+        ADD x9, x9, 1
+        LDRH w5, [x3, x9, LSL 1] // array[i + 1]
+
+
+
+        CMP w4, w5
+        BGT bs_cont_loop2_2 // Cambia BLT a BGT para ordenar en orden descendente
+
+
+
+
+
+        // Intercambiar si no están en orden
+        STRH w4, [x3, x9, LSL 1]
+        SUB x9, x9, 1
+        STRH w5, [x3, x9, LSL 1]
+        ADD x9, x9, 1
+
+
+
+
+
+    bs_cont_loop2_2:
+        CMP x9, x2
+        BNE bs_loop2_2
+
+        ADD x1, x1, 1
+        CMP x1, x0
+        BNE bs_loop1_1
+    RET
+
+
+//quickSort-----------------------------
+
+quickSort:
+    // x1 = start, x2 = end
+    CMP x1, x2           // Si start >= end, salir
+    BGE qs_return
+
+    STP x29, x30, [SP, -16]!  // Guardar Frame Pointer y Link Register
+    MOV x29, SP
+
+    // Partición del array
+    STP x19, x20, [SP, -16]!  // Guardar registros temporales x19 y x20
+    MOV x19, x1               // Guardar el índice inicial (start)
+    MOV x20, x2               // Guardar el índice final (end)
+    
+    BL partition              // Particionar el array, el pivote queda en x0
+
+    // Ordenar recursivamente los elementos antes y después del pivote
+    SUB x2, x0, 1             // Final = pivote - 1
+    BL quickSort              // Llamada recursiva para la primera mitad
+
+    ADD x1, x0, 1             // Inicio = pivote + 1
+    MOV x2, x20               // Restaurar el valor original de end
+    BL quickSort              // Llamada recursiva para la segunda mitad
+
+    LDP x19, x20, [SP], 16    // Restaurar registros x19 y x20
+    LDP x29, x30, [SP], 16    // Restaurar Frame Pointer y Link Register
+qs_return:
+    RET
+
+partition:
+    // x1 = start, x2 = end
+    STP x29, x30, [SP, -16]!     // Guardar Frame Pointer y Link Register
+    MOV x29, SP
+
+    // Escoger el pivote (último elemento)
+    LDR x3, =array
+    LDRH w0, [x3, x2, LSL 1]     // Cargar el pivote (array[end])
+
+    // Inicializar los índices de partición
+    SUB x4, x1, 1                // índice i = start - 1
+    MOV x5, x1                   // índice j = start
+
+    partition_loop:
+        CMP x5, x2               // Mientras j < end
+        BGE partition_done
+
+        LDRH w6, [x3, x5, LSL 1] // Cargar array[j]
+
+        CMP w6, w0               // Comparar array[j] con el pivote
+        BGT skip_swap            // Si array[j] > pivote, no hacer swap
+
+        ADD x4, x4, 1            // i++
+        LDRH w7, [x3, x4, LSL 1] // Cargar array[i]
+
+        // Intercambiar array[i] con array[j]
+        STRH w6, [x3, x4, LSL 1] // array[i] = array[j]
+        STRH w7, [x3, x5, LSL 1] // array[j] = array[i]
+
+    skip_swap:
+        ADD x5, x5, 1            // j++
+        B partition_loop
+
+    partition_done:
+        // Colocar el pivote en su posición correcta
+        ADD x4, x4, 1
+        LDRH w6, [x3, x4, LSL 1] // Cargar array[i + 1]
+
+        STRH w0, [x3, x4, LSL 1] // array[i + 1] = pivote
+        STRH w6, [x3, x2, LSL 1] // array[end] = array[i + 1]
+
+        // Devolver la posición del pivote
+        MOV x0, x4
+
+        LDP x29, x30, [SP], 16   // Restaurar Frame Pointer y Link Register
+        RET
+
+// TERMINA Quicksort------------------------
+
+//comieza quicksort descendente------------------------
+
+quickSort_2:
+    // x1 = start, x2 = end
+    CMP x1, x2           // Si start >= end, salir
+    BGE qs_return_2
+
+    STP x29, x30, [SP, -16]!  // Guardar Frame Pointer y Link Register
+    MOV x29, SP
+
+    // Partición del array
+    STP x19, x20, [SP, -16]!  // Guardar registros temporales x19 y x20
+    MOV x19, x1               // Guardar el índice inicial (start)
+    MOV x20, x2               // Guardar el índice final (end)
+    
+    BL partition_2              // Particionar el array, el pivote queda en x0
+
+    // Ordenar recursivamente los elementos antes y después del pivote
+    SUB x2, x0, 1             // Final = pivote - 1
+    BL quickSort_2              // Llamada recursiva para la primera mitad
+
+    ADD x1, x0, 1             // Inicio = pivote + 1
+    MOV x2, x20               // Restaurar el valor original de end
+    BL quickSort_2              // Llamada recursiva para la segunda mitad
+
+    LDP x19, x20, [SP], 16    // Restaurar registros x19 y x20
+    LDP x29, x30, [SP], 16    // Restaurar Frame Pointer y Link Register
+qs_return_2:
+    RET
+
+partition_2:
+    // x1 = start, x2 = end
+    STP x29, x30, [SP, -16]!     // Guardar Frame Pointer y Link Register
+    MOV x29, SP
+
+    // Escoger el pivote (último elemento)
+    LDR x3, =array
+    LDRH w0, [x3, x2, LSL 1]     // Cargar el pivote (array[end])
+
+    // Inicializar los índices de partición
+    SUB x4, x1, 1                // índice i = start - 1
+    MOV x5, x1                   // índice j = start
+
+    partition_loop_2:
+        CMP x5, x2               // Mientras j < end
+        BGE partition_done_2
+
+        LDRH w6, [x3, x5, LSL 1] // Cargar array[j]
+
+        CMP w6, w0               // Comparar array[j] con el pivote
+        BLT skip_swap_2            // Si array[j] < pivote, no hacer swap
+
+        ADD x4, x4, 1            // i++
+        LDRH w7, [x3, x4, LSL 1] // Cargar array[i]
+
+        // Intercambiar array[i] con array[j]
+        STRH w6, [x3, x4, LSL 1] // array[i] = array[j]
+        STRH w7, [x3, x5, LSL 1] // array[j] = array[i]
+
+    skip_swap_2:
+        ADD x5, x5, 1            // j++
+        B partition_loop_2
+
+    partition_done_2:
+        // Colocar el pivote en su posición correcta
+        ADD x4, x4, 1
+        LDRH w6, [x3, x4, LSL 1] // Cargar array[i + 1]
+
+        STRH w0, [x3, x4, LSL 1] // array[i + 1] = pivote
+        STRH w6, [x3, x2, LSL 1] // array[end] = array[i + 1]
+
+        // Devolver la posición del pivote
+        MOV x0, x4
+
+        LDP x29, x30, [SP], 16   // Restaurar Frame Pointer y Link Register
+        RET
+
+
+
+//termina quicksort descendente------------------------
+
+//INSERTION SORT------------------------------
+
+insertionSort:
+    STP x29, x30, [SP, -16]!    // Guardar Frame Pointer y Link Register
+    MOV x29, SP
+
+    // x1 = start, x2 = end (índices del array)
+    MOV x1, 0                   // Inicio del array
+    LDR x2, =count              // Cargar la cantidad de elementos
+    LDR x2, [x2]                // end = count - 1
+    SUB x2, x2, 1
+
+    // Ciclo principal de Insertion Sort
+insertion_loop:
+
+    ADD x3, x1, 1               // x3 = i + 1 (el siguiente índice)
+    CMP x3, x2                  // Si i+1 >= end, salir
+    BGT insertion_done
+
+    LDR x4, =array              // Dirección base del array
+    LDRH w5, [x4, x3, LSL 1]    // Cargar array[i+1] en w5 (key)
+
+    // Comenzar el proceso de desplazamiento
+    MOV x6, x1                  // j = i
+    insertion_shift:
+        LDRH w7, [x4, x6, LSL 1] // Cargar array[j] en w7
+        CMP w7, w5               // Comparar array[j] con la key
+        BLE insertion_place      // Si array[j] <= key, insertar
+
+        // Desplazar array[j] hacia la derecha
+        ADD x8, x6, 1
+        STRH w7, [x4, x8, LSL 1] // array[j+1] = array[j]
+
+        SUB x6, x6, 1            // j--
+        CMP x6, -1               // Si j < 0, detener desplazamiento
+        BGE insertion_shift
+
+    insertion_place:
+        ADD x8, x6, 1
+        STRH w5, [x4, x8, LSL 1] // Insertar la key en su lugar (array[j+1])
+
+    ADD x1, x1, 1                // i++
+    B insertion_loop             // Repetir para el siguiente elemento
+
+insertion_done:
+    LDP x29, x30, [SP], 16       // Restaurar Frame Pointer y Link Register
+    RET
+
+
+
+//TERMINA INSERTION SORT------------------------
+
+
+//comienza insertion sort descendente------------------------
+
+
+insertionSort_2:
+    STP x29, x30, [SP, -16]!    // Guardar Frame Pointer y Link Register
+    MOV x29, SP
+
+    // x1 = start, x2 = end (índices del array)
+    MOV x1, 0                   // Inicio del array
+    LDR x2, =count              // Cargar la cantidad de elementos
+    LDR x2, [x2]                // end = count - 1
+    SUB x2, x2, 1
+
+    // Ciclo principal de Insertion Sort
+insertion_loop_2:
+
+    ADD x3, x1, 1               // x3 = i + 1 (el siguiente índice)
+    CMP x3, x2                  // Si i+1 > end, salir
+    BGT insertion_done_2
+
+    LDR x4, =array              // Dirección base del array
+    LDRH w5, [x4, x3, LSL 1]    // Cargar array[i+1] en w5 (key)
+
+    // Comenzar el proceso de desplazamiento
+    MOV x6, x1                  // j = i
+    insertion_shift_2:
+        LDRH w7, [x4, x6, LSL 1] // Cargar array[j] en w7
+        CMP w7, w5               // Comparar array[j] con la key
+        BGE insertion_place_2    // Si array[j] >= key, insertar
+
+        // Desplazar array[j] hacia la derecha
+        ADD x8, x6, 1
+        STRH w7, [x4, x8, LSL 1] // array[j+1] = array[j]
+
+        SUB x6, x6, 1            // j--
+        CMP x6, -1               // Si j < 0, detener desplazamiento
+        BGE insertion_shift_2
+
+    insertion_place_2:
+        // Aquí no hay necesidad de mover j + 1
+        ADD x8, x6, 1
+        STRH w5, [x4, x8, LSL 1] // Insertar la key en su lugar (array[j+1])
+
+    ADD x1, x1, 1                // i++
+    B insertion_loop_2           // Repetir para el siguiente elemento
+
+insertion_done_2:
+    LDP x29, x30, [SP], 16       // Restaurar Frame Pointer y Link Register
+    RET
+
+
+//termina insertion sort descendente------------------------    
+
+
+//Merge Sort-----------------------------------
+
+//termina merge sort---------------------------
+
+
+clearArray:
+    LDR x0, =count
+    MOV w1, 0
+    STR w1, [x0]     // Restablecer count a 0
+
+    LDR x2, =array   // Puntero al inicio del array
+    MOV x3, 0        // Valor a escribir (0)
+
+    LDR x4, =100     // Tamaño del array (en elementos)
+    MOV x5, 0
+
+    RET
+
 leercsv:
     // Limpiar salida de la terminal
     print clear_screen, lenClear
@@ -380,7 +757,7 @@ leercsv:
     print msgFilename, lenMsgFilename
     read 0, filename, 50
     
-    // Agregar caracter nulo al final del nombre del archivo
+    // Agregar caracter nulo al final del nombre del archivoclearArray
      LDR x0, =filename
      loop:
          LDRB w1, [x0], 1
@@ -402,8 +779,12 @@ leercsv:
     // funcion para cerrar el archivo
     BL closeFile 
 
-    // Llamar Algoritmo de Ordenamiento Burbuja
-    BL bubbleSort
+    // Después de leer el CSV:
+    MOV x1, 0                      // start = 0
+    LDR x2, =count
+    LDR x2, [x2]                   // end = count - 1
+    SUB x2, x2, 1
+    BL quickSort                    // Llamar quicksort
 
     // recorrer array y convertir a ascii
     BL convert_array_to_ascii
@@ -411,11 +792,285 @@ leercsv:
     //imprimir el array ordenado
     print salto, lenSalto
 
+    BL clearArray // Limpiar el array
+
     B menu
 
 
+leercsv_2:
+    // Limpiar salida de la terminal
+    print clear_screen, lenClear
+// Mensaje para ingresar el nombre del archivo
 
-// Etiqueta de inicio del programa
+    print msgFilename, lenMsgFilename
+    read 0, filename, 50
+    
+    // Agregar caracter nulo al final del nombre del archivoclearArray
+     LDR x0, =filename
+     loop_2:
+         LDRB w1, [x0], 1
+         CMP w1, 10
+         BEQ endLoop_2
+         B loop_2
+
+         endLoop_2:
+             MOV w1, 0
+             STRB w1, [x0, -1]!
+
+    // funcion para abrir el archivo
+    LDR x1, =filename
+    BL openFile 
+    
+    // procedimiento para leer los numeros del archivo
+    BL readCSV
+
+    // funcion para cerrar el archivo
+    BL closeFile 
+
+    // Después de leer el CSV:
+    MOV x1, 0                      // start = 0
+    LDR x2, =count
+    LDR x2, [x2]                   // end = count - 1
+    SUB x2, x2, 1
+    BL quickSort_2                    // Llamar quicksort
+
+    // recorrer array y convertir a ascii
+    BL convert_array_to_ascii
+
+    //imprimir el array ordenado
+    print salto, lenSalto
+
+    BL clearArray // Limpiar el array
+
+    B menu
+
+
+leercsv2:
+    // Limpiar salida de la terminal
+    print clear_screen, lenClear
+// Mensaje para ingresar el nombre del archivo
+
+    print msgFilename, lenMsgFilename
+    read 0, filename, 50
+    
+    // Agregar caracter nulo al final del nombre del archivo
+     LDR x0, =filename
+     loop2:
+         LDRB w1, [x0], 1
+         CMP w1, 10
+         BEQ endLoop2
+         B loop2
+
+         endLoop2:
+             MOV w1, 0
+             STRB w1, [x0, -1]!
+
+    // funcion para abrir el archivo
+    LDR x1, =filename
+    BL openFile 
+    
+    // procedimiento para leer los numeros del archivo
+    BL readCSV
+
+    // funcion para cerrar el archivo
+    BL closeFile 
+
+
+    BL bubbleSort  
+
+                       
+
+
+    // recorrer array y convertir a ascii
+    BL convert_array_to_ascii
+
+
+    BL clearArray // Limpiar el array
+
+    B menu
+
+leercsv2_2:
+    // Limpiar salida de la terminal
+    print clear_screen, lenClear
+// Mensaje para ingresar el nombre del archivo
+
+    print msgFilename, lenMsgFilename
+    read 0, filename, 50
+    
+    // Agregar caracter nulo al final del nombre del archivo
+     LDR x0, =filename
+     loop2_2:
+         LDRB w1, [x0], 1
+         CMP w1, 10
+         BEQ endLoop2_2
+         B loop2_2
+
+         endLoop2_2:
+             MOV w1, 0
+             STRB w1, [x0, -1]!
+
+    // funcion para abrir el archivo
+    LDR x1, =filename
+    BL openFile 
+    
+    // procedimiento para leer los numeros del archivo
+    BL readCSV
+
+    // funcion para cerrar el archivo
+    BL closeFile 
+
+
+    BL bubbleSort2  
+
+                
+    // recorrer array y convertir a ascii
+    BL convert_array_to_ascii
+
+
+    BL clearArray // Limpiar el array
+
+    B menu
+
+
+    
+    
+
+leercsv3:
+    // Limpiar salida de la terminal
+    print clear_screen, lenClear
+// Mensaje para ingresar el nombre del archivo
+
+    print msgFilename, lenMsgFilename
+    read 0, filename, 50
+    
+    // Agregar caracter nulo al final del nombre del archivo
+     LDR x0, =filename
+     loop3:
+         LDRB w1, [x0], 1
+         CMP w1, 10
+         BEQ endLoop3
+         B loop3
+
+         endLoop3:
+             MOV w1, 0
+             STRB w1, [x0, -1]!
+
+    // funcion para abrir el archivo
+    LDR x1, =filename
+    BL openFile 
+    
+    // procedimiento para leer los numeros del archivo
+    BL readCSV
+
+    // funcion para cerrar el archivo
+    BL closeFile 
+
+    // Después de leer el CSV:
+    BL insertionSort               
+
+
+    // recorrer array y convertir a ascii
+    BL convert_array_to_ascii
+
+    //imprimir el array ordenado
+    print salto, lenSalto
+
+    BL clearArray // Limpiar el array
+
+    B menu
+
+
+leercsv3_2:
+    // Limpiar salida de la terminal
+    print clear_screen, lenClear
+// Mensaje para ingresar el nombre del archivo
+
+    print msgFilename, lenMsgFilename
+    read 0, filename, 50
+    
+    // Agregar caracter nulo al final del nombre del archivo
+     LDR x0, =filename
+     loop3_2:
+         LDRB w1, [x0], 1
+         CMP w1, 10
+         BEQ endLoop3_2
+         B loop3_2
+
+         endLoop3_2:
+             MOV w1, 0
+             STRB w1, [x0, -1]!
+
+    // funcion para abrir el archivo
+    LDR x1, =filename
+    BL openFile 
+    
+    // procedimiento para leer los numeros del archivo
+    BL readCSV
+
+    // funcion para cerrar el archivo
+    BL closeFile 
+
+    // Después de leer el CSV:
+    BL insertionSort_2               
+
+
+    // recorrer array y convertir a ascii
+    BL convert_array_to_ascii
+
+    //imprimir el array ordenado
+    print salto, lenSalto
+
+    BL clearArray // Limpiar el array
+
+    B menu
+
+
+menu_bubbleSort:
+    print menuAsc, lenAsc
+    print msgOpcion, lenOpcion
+    input
+
+    LDR x17, =opcion2
+    LDRB w10, [x17]
+
+    CMP w10, 49
+    BEQ leercsv2
+
+    CMP w10, 50
+    BEQ leercsv2_2
+
+
+menu_quickSort:
+    print menuAsc, lenAsc
+    print msgOpcion, lenOpcion
+    input
+
+    LDR x17, =opcion2
+    LDRB w10, [x17]
+
+    CMP w10, 49
+    BEQ leercsv
+
+    CMP w10, 50
+    BEQ leercsv_2
+
+menu_insertionSort:
+    print menuAsc, lenAsc
+    print msgOpcion, lenOpcion
+    input
+
+    LDR x17, =opcion2
+    LDRB w10, [x17]
+
+    CMP w10, 49
+    BEQ leercsv3
+
+    CMP w10, 50
+    BEQ leercsv3_2   
+    
+
+
+
 _start:
     // Limpiar salida de la terminal
     print clear_screen, lenClear
@@ -431,11 +1086,16 @@ _start:
         LDR x17, =opcion2
         LDRB w10, [x17]
 
-        CMP w10, 49
-        BEQ leercsv
-        
+        CMP w10, 50
+        BEQ menu_bubbleSort
+
+        CMP w10, 51
+        BEQ menu_quickSort
 
         CMP w10, 52
+        BEQ menu_insertionSort
+
+        CMP w10, 54
         BEQ finalizar_calculadora
 
     
